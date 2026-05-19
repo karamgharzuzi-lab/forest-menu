@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Dish } from "@/data/menu";
 
@@ -17,28 +20,46 @@ function CameraIcon() {
 type Props = { dish: Dish; priority?: boolean };
 
 export default function DishRow({ dish, priority = false }: Props) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(priority);
+
+  useEffect(() => {
+    if (priority) return;
+    const el = rowRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [priority]);
+
   return (
-    /*
-      RTL flex row: first DOM child → rightmost on screen.
-      Order: [image] [name+leader+price]
-      Image sits on the far right, price on the far left.
-    */
     <div
-      className="flex items-center gap-3 py-3 border-b border-charcoal/10 last:border-0"
+      ref={rowRef}
+      className={`flex items-center gap-3 py-3 border-b border-charcoal/10 last:border-0 transition-all duration-500 ease-out ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+      }`}
       dir="rtl"
     >
-      {/* Image — first child, RIGHT in RTL */}
+      {/* Image — RIGHT in RTL */}
       <div
         className="flex-shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
-        style={{ width: 72, height: 72, minWidth: 72, background: "#E8DCC4" }}
+        style={{ width: 96, height: 96, minWidth: 96, background: "#E8DCC4" }}
       >
         {dish.image ? (
           <Image
             src={dish.image}
             alt={dish.name}
-            width={72}
-            height={72}
-            className="object-cover w-full h-full"
+            width={96}
+            height={96}
+            className="object-cover w-full h-full transition-transform duration-300 hover:scale-110"
             placeholder="blur"
             blurDataURL={BLUR_DATA}
             loading={priority ? "eager" : "lazy"}
@@ -50,7 +71,7 @@ export default function DishRow({ dish, priority = false }: Props) {
 
       {/* Text row: name+desc on right, dotted leader, price on left */}
       <div className="flex-1 flex items-end gap-2 min-w-0 pb-0.5">
-        {/* Name + description — rightmost in this sub-row (RTL first child) */}
+        {/* Name + description */}
         <div className="flex flex-col min-w-0 flex-shrink-0" style={{ maxWidth: "58%" }}>
           <span className="font-heebo font-bold text-charcoal text-[14px] sm:text-[15px] leading-snug">
             {dish.name}
@@ -62,14 +83,14 @@ export default function DishRow({ dish, priority = false }: Props) {
           )}
         </div>
 
-        {/* Dotted leader — stretches to fill space */}
+        {/* Dotted leader */}
         <span
           className="flex-1 self-end mb-[4px] min-w-2"
           style={{ borderBottom: "2px dotted rgba(31,26,20,0.18)" }}
           aria-hidden="true"
         />
 
-        {/* Price — last child, LEFT in RTL */}
+        {/* Price — LEFT in RTL */}
         <span className="font-heebo font-bold text-charcoal text-[14px] sm:text-[15px] flex-shrink-0 tabular-nums">
           ₪{dish.price}
         </span>
